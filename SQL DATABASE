@@ -1,0 +1,190 @@
+
+CREATE TABLE EMPRESA (
+    id_empresa NUMBER PRIMARY KEY,
+    razao_social VARCHAR2(100),
+    inativo CHAR(3)
+);
+
+INSERT INTO EMPRESA VALUES ('1111','VALE','NAO');
+INSERT INTO EMPRESA VALUES ('1112','PETROBRAS','NAO');
+INSERT INTO EMPRESA VALUES ('1113','CASSOL','NAO');
+
+SELECT * FROM EMPRESA;
+
+CREATE TABLE PRODUTOS (
+    id_produto NUMBER PRIMARY KEY, 
+    descricao VARCHAR2(100), 
+    inativo CHAR(3)
+);
+
+INSERT INTO PRODUTOS VALUES ('2222','ELETRO','NAO');
+INSERT INTO PRODUTOS VALUES ('2223','MADEIRA','NAO');
+INSERT INTO PRODUTOS VALUES ('2224','FERRO','NAO');
+
+SELECT * FROM PRODUTOS;
+
+CREATE TABLE VENDEDORES (
+    id_vendedor NUMBER PRIMARY KEY, 
+    nome VARCHAR2(100), 
+    cargo VARCHAR2(30), 
+    salario FLOAT, 
+    data_admissao DATE, 
+    inativo CHAR(3)
+);
+
+INSERT INTO VENDEDORES VALUES ('3333','DIEGO','VENDEDOR', 3234.23, '31-DEC-2022','NAO');
+INSERT INTO VENDEDORES VALUES ('3334','LUCAS','VENDEDOR', 9992.66, '11-NOV-2019','NAO');
+INSERT INTO VENDEDORES VALUES ('3335','ADRIANO','VENDEDOR', 8764.90, '02-MAY-2000','NAO');
+
+SELECT * FROM VENDEDORES;
+
+CREATE TABLE CONFIG_PRECO_PRODUTO (
+    id_config_preco_produto NUMBER PRIMARY KEY, 
+    preco_minimo FLOAT, 
+    preco_maximo FLOAT,
+    id_vendedor NUMBER, 
+    id_empresa NUMBER, 
+    id_produto NUMBER, 
+	CONSTRAINT fk_PreVendedor FOREIGN KEY (id_vendedor) REFERENCES VENDEDORES (id_vendedor),
+    CONSTRAINT fk_PreEmpresa FOREIGN KEY (id_empresa) REFERENCES EMPRESA (id_empresa),
+    CONSTRAINT fk_PreProduto FOREIGN KEY (id_produto) REFERENCES PRODUTOS (id_produto)
+);
+
+INSERT INTO CONFIG_PRECO_PRODUTO VALUES ('4444', 22.90, 33.50,'3333','1111','2222');
+INSERT INTO CONFIG_PRECO_PRODUTO VALUES ('4445', 11.40, 23.80,'3334','1112','2223');
+INSERT INTO CONFIG_PRECO_PRODUTO VALUES ('4446', 43.22, 50.00,'3335','1113','2224');
+
+SELECT * FROM CONFIG_PRECO_PRODUTO;
+
+CREATE TABLE CLIENTES (
+    id_cliente NUMBER PRIMARY KEY, 
+    razao_social VARCHAR2(100),
+    data_cadastro DATE,
+    inativo CHAR(3),
+    id_vendedor NUMBER,
+    id_empresa NUMBER,
+    CONSTRAINT fk_CliVendedor FOREIGN KEY (id_vendedor) REFERENCES VENDEDORES (id_vendedor),
+    CONSTRAINT fk_CliEmpresa FOREIGN KEY (id_empresa) REFERENCES EMPRESA (id_empresa)
+);
+
+INSERT INTO CLIENTES VALUES ('5555','AmericanExpress','14-AUG-2003','NAO','3333','1111');
+INSERT INTO CLIENTES VALUES ('5556','Soya','22-OCT-2023','NAO','3334','1112');
+INSERT INTO CLIENTES VALUES ('5557','LIBERTY','11-DEC-1999','NAO','3335','1113');
+
+SELECT * FROM CLIENTES;
+
+CREATE TABLE PEDIDO (
+    id_pedido NUMBER PRIMARY KEY,
+    valor_total FLOAT,
+    data_emissao DATE,
+    situacao CHAR(7),
+    id_empresa NUMBER,
+    id_cliente NUMBER,
+    CONSTRAINT fk_PediEmpresa FOREIGN KEY (id_empresa) REFERENCES EMPRESA (id_empresa),
+    CONSTRAINT fk_PediCliente FOREIGN KEY (id_cliente) REFERENCES CLIENTES (id_cliente)
+);
+
+INSERT INTO PEDIDO VALUES ('6666',5040.45,'12-NOV-2024','ATIVO','1111','5555');
+INSERT INTO PEDIDO VALUES ('6667',420.33,'13-AUG-2024','INATIVO','1112','5556');
+INSERT INTO PEDIDO VALUES ('6668',123.90,'14-SEP-2024','ATIVO','1113','5557');
+
+SELECT * FROM PEDIDO;
+    
+CREATE TABLE ITENS_PEDIDO (
+    id_item_pedido NUMBER PRIMARY KEY,
+    preco_praticado FLOAT,
+    quantidade INT,
+    id_pedido NUMBER,
+    id_produto NUMBER,
+    CONSTRAINT fk_ItensPedido FOREIGN KEY (id_pedido) REFERENCES PEDIDO (id_pedido),
+    CONSTRAINT fk_ItensProduto FOREIGN KEY (id_produto) REFERENCES PRODUTOS (id_produto)
+);
+
+INSERT INTO ITENS_PEDIDO VALUES ('7777',5040.45,115,'6666','2222');
+INSERT INTO ITENS_PEDIDO VALUES ('7778',420.33,16,'6667','2223');
+INSERT INTO ITENS_PEDIDO VALUES ('7779',123.90,2,'6668','2224');
+
+SELECT * FROM ITENS_PEDIDO;
+
+
+--/* a.Consultas Básicas: Escreva consultas SQL para obter as seguintes informações:
+
+--/*Lista de funcionários ordenando pelo salário decrescente.
+SELECT * from VENDEDORES 
+ORDER BY SALARIO DESC;
+
+--/*Lista de pedidos de vendas ordenado por data de emissão.
+SELECT * from PEDIDO 
+ORDER BY data_emissao;
+
+--/*Valor de faturamento por cliente.
+SELECT CLIENTES.razao_social, SUM(PEDIDO.valor_total) AS faturamento
+FROM PEDIDO
+JOIN CLIENTES ON PEDIDO.id_cliente = CLIENTES.id_cliente
+GROUP BY CLIENTES.razao_social;
+
+--/*Valor de faturamento por empresa.
+SELECT EMPRESA.razao_social, SUM(PEDIDO.valor_total) AS faturamento
+FROM PEDIDO
+JOIN EMPRESA ON PEDIDO.id_empresa = EMPRESA.id_empresa
+GROUP BY EMPRESA.razao_social
+ORDER BY FATURAMENTO DESC;
+
+--/*Valor de faturamento por vendedor.
+SELECT VENDEDORES.nome, SUM(PEDIDO.valor_total) AS faturamento
+FROM PEDIDO
+JOIN CLIENTES ON PEDIDO.id_cliente = CLIENTES.id_cliente
+JOIN VENDEDORES ON CLIENTES.id_vendedor = VENDEDORES.id_vendedor
+GROUP BY VENDEDORES.nome
+ORDER BY FATURAMENTO ASC;
+
+--/* b. Consultas de Junção:
+--Escreva consultas SQL para obter as seguintes informações usando junções:
+--Unindo a listagem de produtos com a listagem de clientes, procure o último preço praticado nesse cliente com esse produto, 
+--formule o preço base do produto dentro da coluna chamada preco_base no seu select, conforme a seguinte regra:
+--O preço base do produto deve obedecer a configuração de preço da tabela CONFIG_PRECO_PRODUTO.
+--Caso as junções não retornem o último preço praticado, utilize o menor da configuração de preço do produto.
+--Nesta mesma consulta, os seguintes campos deverão estar contidos:
+--Id do produto em questão;
+--Descrição do produto;
+--Id do cliente do pedido;
+--Razão social do cliente;
+--Id da empresa do pedido;
+--Razão social da empresa;
+--Id do vendedor do pedido;
+--Nome do vendedor;
+--Preço mínimo e máximo da configuração de preço;
+--Preço base do produto conforme a regra.
+
+SELECT 
+    p.id_produto,
+    p.descricao,
+    c.id_cliente,
+    c.razao_social AS cliente_razao_social,
+    e.id_empresa,
+    e.razao_social AS empresa_razao_social,
+    v.id_vendedor,
+    v.nome AS vendedor_nome,
+    cpp.preco_minimo,
+    cpp.preco_maximo,
+    COALESCE(
+        (SELECT ip.preco_praticado 
+         FROM ITENS_PEDIDO ip
+         JOIN PEDIDO pd ON ip.id_pedido = pd.id_pedido 
+         WHERE ip.id_produto = p.id_produto 
+           AND pd.id_cliente = c.id_cliente 
+         ORDER BY pd.data_emissao DESC 
+         FETCH FIRST 1 ROWS ONLY), 
+        cpp.preco_minimo
+    ) AS preco_base
+FROM 
+    PRODUTOS p
+JOIN 
+    CONFIG_PRECO_PRODUTO cpp ON p.id_produto = cpp.id_produto
+JOIN 
+    CLIENTES c ON cpp.id_empresa = c.id_empresa
+JOIN 
+    EMPRESA e ON c.id_empresa = e.id_empresa
+JOIN 
+    VENDEDORES v ON c.id_vendedor = v.id_vendedor;
+
